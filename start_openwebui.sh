@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Conda Environment Configuration
+CONDA_ENV_PATH="/mnt/d/miniforge3/envs/openwebui"
+export PATH="${CONDA_ENV_PATH}/bin:$PATH"
+
 # Load secrets from .env automatically if present
 if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
