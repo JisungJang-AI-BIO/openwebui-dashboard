@@ -26,6 +26,11 @@ function RatingCell({ value }: { value: number }) {
   return <span className="font-mono text-muted-foreground">0</span>;
 }
 
+function emailPrefix(email: string) {
+  if (!email) return "-";
+  return email.split("@")[0];
+}
+
 export default function WorkspaceRankingTable({ data }: WorkspaceRankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("chat_count");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -61,6 +66,7 @@ export default function WorkspaceRankingTable({ data }: WorkspaceRankingTablePro
             <tr className="border-b border-border text-left text-muted-foreground">
               <th className="pb-3 pr-4 font-medium w-12">#</th>
               <th className="pb-3 pr-4 font-medium">Workspace</th>
+              <th className="pb-3 pr-4 font-medium" title="Knox Portal Email">Developer</th>
               {COLUMNS.map((col) => (
                 <th
                   key={col.key}
@@ -77,14 +83,8 @@ export default function WorkspaceRankingTable({ data }: WorkspaceRankingTablePro
             {sorted.map((ws, i) => (
               <tr key={ws.id} className="border-b border-border/50 hover:bg-muted/50">
                 <td className="py-3 pr-4 text-muted-foreground font-mono">{i + 1}</td>
-                <td className="py-3 pr-4">
-                  <div>
-                    <span className="font-medium">{ws.name}</span>
-                    {ws.name !== ws.id && (
-                      <span className="ml-2 text-xs text-muted-foreground">{ws.id}</span>
-                    )}
-                  </div>
-                </td>
+                <td className="py-3 pr-4 font-medium">{ws.name}</td>
+                <td className="py-3 pr-4 text-muted-foreground">{emailPrefix(ws.developer_email)}</td>
                 <td className="py-3 pr-4 text-right font-mono">{ws.user_count}</td>
                 <td className="py-3 pr-4 text-right font-mono">{ws.chat_count}</td>
                 <td className="py-3 pr-4 text-right font-mono">{ws.message_count}</td>
@@ -93,7 +93,7 @@ export default function WorkspaceRankingTable({ data }: WorkspaceRankingTablePro
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-muted-foreground">No workspace data.</td>
+                <td colSpan={7} className="py-10 text-center text-muted-foreground">No workspace data.</td>
               </tr>
             )}
           </tbody>

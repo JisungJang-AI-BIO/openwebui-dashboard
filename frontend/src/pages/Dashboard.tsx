@@ -5,13 +5,13 @@ import DailyChart from "@/components/DailyChart";
 import WorkspaceRankingTable from "@/components/WorkspaceRankingTable";
 import DeveloperRankingTable from "@/components/DeveloperRankingTable";
 import GroupRankingTable from "@/components/GroupRankingTable";
-import FeedbackSummary from "@/components/FeedbackSummary";
+import RequirePackages from "@/components/RequirePackages";
+import MockAuthBanner from "@/components/MockAuthBanner";
 import {
   fetchOverview, fetchDailyStats, fetchWorkspaceRanking,
-  fetchDeveloperRanking, fetchGroupRanking, fetchFeedbackSummary,
+  fetchDeveloperRanking, fetchGroupRanking,
   type OverviewStats, type DailyStat,
   type WorkspaceRanking, type DeveloperRanking, type GroupRanking,
-  type FeedbackSummary as FeedbackSummaryType,
 } from "@/lib/api";
 
 function kstDate(offsetDays: number): string {
@@ -24,7 +24,7 @@ export default function Dashboard() {
   const [workspaces, setWorkspaces] = useState<WorkspaceRanking[]>([]);
   const [developers, setDevelopers] = useState<DeveloperRanking[]>([]);
   const [groups, setGroups] = useState<GroupRanking[]>([]);
-  const [feedback, setFeedback] = useState<FeedbackSummaryType | null>(null);
+  const [mockUser, setMockUser] = useState(() => localStorage.getItem("mockUser") || "jisung.jang");
   const [dateFrom, setDateFrom] = useState(kstDate(-7));
   const [dateTo, setDateTo] = useState(kstDate(-1));
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,6 @@ export default function Dashboard() {
       fetchWorkspaceRanking().then(setWorkspaces),
       fetchDeveloperRanking().then(setDevelopers),
       fetchGroupRanking().then(setGroups),
-      fetchFeedbackSummary().then(setFeedback),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -66,7 +65,8 @@ export default function Dashboard() {
       <WorkspaceRankingTable data={workspaces} />
       <DeveloperRankingTable data={developers} />
       <GroupRankingTable data={groups} />
-      <FeedbackSummary data={feedback} />
+      <RequirePackages currentUser={mockUser} />
+      <MockAuthBanner user={mockUser} onChangeUser={(u) => { setMockUser(u); localStorage.setItem("mockUser", u); }} />
     </div>
   );
 }

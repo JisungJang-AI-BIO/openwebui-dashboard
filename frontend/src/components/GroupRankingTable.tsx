@@ -6,27 +6,15 @@ interface GroupRankingTableProps {
   data: GroupRanking[];
 }
 
-type SortKey = "member_count" | "total_chats" | "total_messages" | "rating" | "chats_per_member" | "messages_per_member";
+type SortKey = "member_count" | "total_feedbacks" | "chats_per_member" | "messages_per_member";
 type SortDir = "asc" | "desc";
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "member_count", label: "Members" },
   { key: "chats_per_member", label: "Chats/Member" },
-  { key: "messages_per_member", label: "Msgs/Member" },
-  { key: "total_chats", label: "Total Chats" },
-  { key: "total_messages", label: "Total Msgs" },
-  { key: "rating", label: "Rating" },
+  { key: "messages_per_member", label: "Messages/Member" },
+  { key: "total_feedbacks", label: "Total number of feedbacks" },
 ];
-
-function getRating(row: GroupRanking) {
-  return row.total_positive - row.total_negative;
-}
-
-function RatingCell({ value }: { value: number }) {
-  if (value > 0) return <span className="font-mono text-emerald-400">+{value}</span>;
-  if (value < 0) return <span className="font-mono text-rose-400">{value}</span>;
-  return <span className="font-mono text-muted-foreground">0</span>;
-}
 
 export default function GroupRankingTable({ data }: GroupRankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("chats_per_member");
@@ -42,8 +30,8 @@ export default function GroupRankingTable({ data }: GroupRankingTableProps) {
   };
 
   const sorted = [...data].sort((a, b) => {
-    const va = sortKey === "rating" ? getRating(a) : a[sortKey];
-    const vb = sortKey === "rating" ? getRating(b) : b[sortKey];
+    const va = a[sortKey];
+    const vb = b[sortKey];
     return sortDir === "desc" ? vb - va : va - vb;
   });
 
@@ -56,7 +44,12 @@ export default function GroupRankingTable({ data }: GroupRankingTableProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
-      <h3 className="mb-4 text-lg font-semibold">Best Group Ranking</h3>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">Best User Group Ranking</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Per-capita usage metrics for each user group. Ranked by chats per member by default.
+        </p>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -83,14 +76,12 @@ export default function GroupRankingTable({ data }: GroupRankingTableProps) {
                 <td className="py-3 pr-4 text-right font-mono">{g.member_count}</td>
                 <td className="py-3 pr-4 text-right font-mono">{g.chats_per_member}</td>
                 <td className="py-3 pr-4 text-right font-mono">{g.messages_per_member}</td>
-                <td className="py-3 pr-4 text-right font-mono">{g.total_chats}</td>
-                <td className="py-3 pr-4 text-right font-mono">{g.total_messages}</td>
-                <td className="py-3 pr-4 text-right"><RatingCell value={getRating(g)} /></td>
+                <td className="py-3 pr-4 text-right font-mono">{g.total_feedbacks}</td>
               </tr>
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-10 text-center text-muted-foreground">No group data.</td>
+                <td colSpan={6} className="py-10 text-center text-muted-foreground">No group data.</td>
               </tr>
             )}
           </tbody>

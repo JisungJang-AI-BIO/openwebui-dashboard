@@ -21,6 +21,7 @@ export interface DailyStat {
 export interface WorkspaceRanking {
   id: string;
   name: string;
+  developer_email: string;
   user_count: number;
   chat_count: number;
   message_count: number;
@@ -46,24 +47,18 @@ export interface GroupRanking {
   member_count: number;
   total_chats: number;
   total_messages: number;
-  total_positive: number;
-  total_negative: number;
+  total_feedbacks: number;
   chats_per_member: number;
   messages_per_member: number;
 }
 
-export interface FeedbackItem {
-  id: string;
-  model_id: string;
-  rating: number;
-  comment: string | null;
-  created_at: string;
-}
-
-export interface FeedbackSummary {
-  positive: number;
-  negative: number;
-  recent: FeedbackItem[];
+export interface PythonPackage {
+  id: number;
+  package_name: string;
+  added_by: string;
+  added_at: string;
+  status: "pending" | "installed" | "rejected";
+  status_note: string | null;
 }
 
 export const fetchOverview = () =>
@@ -87,5 +82,14 @@ export const fetchDeveloperRanking = () =>
 export const fetchGroupRanking = () =>
   api.get<GroupRanking[]>("/api/stats/group-ranking").then((r) => r.data);
 
-export const fetchFeedbackSummary = () =>
-  api.get<FeedbackSummary>("/api/feedbacks/summary").then((r) => r.data);
+export const fetchPackages = () =>
+  api.get<PythonPackage[]>("/api/packages").then((r) => r.data);
+
+export const addPackage = (packageName: string, authUser: string) =>
+  api.post<PythonPackage>("/api/packages", { package_name: packageName }, { headers: { "X-Auth-User": authUser } }).then((r) => r.data);
+
+export const deletePackage = (id: number, authUser: string) =>
+  api.delete(`/api/packages/${id}`, { headers: { "X-Auth-User": authUser } }).then((r) => r.data);
+
+export const updatePackageStatus = (id: number, status: string, authUser: string, note?: string) =>
+  api.patch(`/api/packages/${id}/status`, { status, status_note: note }, { headers: { "X-Auth-User": authUser } }).then((r) => r.data);

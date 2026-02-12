@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, Info } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { type DeveloperRanking } from "@/lib/api";
 
 interface DeveloperRankingTableProps {
@@ -27,10 +27,13 @@ function RatingCell({ value }: { value: number }) {
   return <span className="font-mono text-muted-foreground">0</span>;
 }
 
+function emailPrefix(email: string) {
+  return email.split("@")[0];
+}
+
 export default function DeveloperRankingTable({ data }: DeveloperRankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("total_chats");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [showTooltip, setShowTooltip] = useState(false);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -56,30 +59,18 @@ export default function DeveloperRankingTable({ data }: DeveloperRankingTablePro
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4">
         <h3 className="text-lg font-semibold">Best Developer Ranking</h3>
-        <div className="relative">
-          <Info
-            className="h-4 w-4 text-muted-foreground cursor-help"
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
-          />
-          {showTooltip && (
-            <div className="absolute left-6 top-0 z-20 w-72 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-lg">
-              Ranks users who have created one or more workspaces.
-              Each developer's score is the sum of all metrics
-              (users, chats, messages, rating) across their
-              created workspaces. Base models are excluded.
-            </div>
-          )}
-        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Metrics reflect aggregated usage of workspaces created by each developer, not their personal activity.
+        </p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-muted-foreground">
               <th className="pb-3 pr-4 font-medium w-12">#</th>
-              <th className="pb-3 pr-4 font-medium">Developer</th>
+              <th className="pb-3 pr-4 font-medium" title="Knox Portal Email">Developer</th>
               {COLUMNS.map((col) => (
                 <th
                   key={col.key}
@@ -96,12 +87,7 @@ export default function DeveloperRankingTable({ data }: DeveloperRankingTablePro
             {sorted.map((dev, i) => (
               <tr key={dev.user_id} className="border-b border-border/50 hover:bg-muted/50">
                 <td className="py-3 pr-4 text-muted-foreground font-mono">{i + 1}</td>
-                <td className="py-3 pr-4">
-                  <div>
-                    <span className="font-medium">{dev.user_name}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{dev.email}</span>
-                  </div>
-                </td>
+                <td className="py-3 pr-4 font-medium">{emailPrefix(dev.email)}</td>
                 <td className="py-3 pr-4 text-right font-mono">{dev.workspace_count}</td>
                 <td className="py-3 pr-4 text-right font-mono">{dev.total_users}</td>
                 <td className="py-3 pr-4 text-right font-mono">{dev.total_chats}</td>
