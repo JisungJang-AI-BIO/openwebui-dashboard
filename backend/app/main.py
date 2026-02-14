@@ -154,15 +154,30 @@ def get_daily_stats(
         ORDER BY date
     """), {"from_ts": from_utc, "to_ts": to_utc}).mappings().all()
 
-    return [
-        {
-            "date": str(row["date"]),
-            "chat_count": row["chat_count"],
-            "message_count": row["message_count"] or 0,
-            "user_count": row["user_count"],
-        }
-        for row in rows
-    ]
+    # Fill missing dates with zeros
+    data_by_date = {str(row["date"]): row for row in rows}
+    result = []
+    current = date_from
+    while current <= date_to:
+        key = str(current)
+        if key in data_by_date:
+            row = data_by_date[key]
+            result.append({
+                "date": key,
+                "chat_count": row["chat_count"],
+                "message_count": row["message_count"] or 0,
+                "user_count": row["user_count"],
+            })
+        else:
+            result.append({
+                "date": key,
+                "chat_count": 0,
+                "message_count": 0,
+                "user_count": 0,
+            })
+        current += timedelta(days=1)
+
+    return result
 
 
 @app.get("/api/stats/workspace-ranking")
