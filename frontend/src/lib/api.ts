@@ -1,8 +1,11 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: "http://localhost:8005",
-});
+const BACKEND_PORT = 8005;
+const baseURL =
+  import.meta.env.VITE_API_BASE_URL ||
+  `${window.location.protocol}//${window.location.hostname}:${BACKEND_PORT}`;
+
+const api = axios.create({ baseURL });
 
 export interface OverviewStats {
   total_chats: number;
