@@ -1,11 +1,17 @@
+import { BrowserRouter } from "react-router-dom";
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
+import { ToastProvider } from "@/components/Toast";
 
 function App() {
   return (
-    <Layout>
-      <Dashboard />
-    </Layout>
+    <BrowserRouter>
+      <ToastProvider>
+        <Layout>
+          <Dashboard />
+        </Layout>
+      </ToastProvider>
+    </BrowserRouter>
   );
 }
 

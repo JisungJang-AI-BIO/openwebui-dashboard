@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { type WorkspaceRanking } from "@/lib/api";
+import { SortIcon, RatingCell, emailPrefix } from "@/lib/table-utils";
+import Pagination from "./Pagination";
 
 interface WorkspaceRankingTableProps {
   data: WorkspaceRanking[];
+  total: number;
+  offset: number;
+  limit: number;
+  onPageChange: (offset: number) => void;
 }
 
 type SortKey = "user_count" | "chat_count" | "message_count" | "rating";
-type SortDir = "asc" | "desc";
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "user_count", label: "Users" },
@@ -20,20 +24,9 @@ function getRating(row: WorkspaceRanking) {
   return row.positive - row.negative;
 }
 
-function RatingCell({ value }: { value: number }) {
-  if (value > 0) return <span className="font-mono text-emerald-400">+{value}</span>;
-  if (value < 0) return <span className="font-mono text-rose-400">{value}</span>;
-  return <span className="font-mono text-muted-foreground">0</span>;
-}
-
-function emailPrefix(email: string) {
-  if (!email) return "-";
-  return email.split("@")[0];
-}
-
-export default function WorkspaceRankingTable({ data }: WorkspaceRankingTableProps) {
+export default function WorkspaceRankingTable({ data, total, offset, limit, onPageChange }: WorkspaceRankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("chat_count");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -49,13 +42,6 @@ export default function WorkspaceRankingTable({ data }: WorkspaceRankingTablePro
     const vb = sortKey === "rating" ? getRating(b) : b[sortKey];
     return sortDir === "desc" ? vb - va : va - vb;
   });
-
-  const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 opacity-40" />;
-    return sortDir === "desc"
-      ? <ArrowDown className="ml-1 inline h-3.5 w-3.5" />
-      : <ArrowUp className="ml-1 inline h-3.5 w-3.5" />;
-  };
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -74,7 +60,7 @@ export default function WorkspaceRankingTable({ data }: WorkspaceRankingTablePro
                   onClick={() => handleSort(col.key)}
                 >
                   {col.label}
-                  <SortIcon col={col.key} />
+                  <SortIcon col={col.key} sortKey={sortKey} sortDir={sortDir} />
                 </th>
               ))}
             </tr>
@@ -82,7 +68,7 @@ export default function WorkspaceRankingTable({ data }: WorkspaceRankingTablePro
           <tbody>
             {sorted.map((ws, i) => (
               <tr key={ws.id} className="border-b border-border/50 hover:bg-muted/50">
-                <td className="py-3 pr-4 text-muted-foreground font-mono">{i + 1}</td>
+                <td className="py-3 pr-4 text-muted-foreground font-mono">{offset + i + 1}</td>
                 <td className="py-3 pr-4 font-medium">{ws.name}</td>
                 <td className="py-3 pr-4 text-muted-foreground">{emailPrefix(ws.developer_email)}</td>
                 <td className="py-3 pr-4 text-right font-mono">{ws.user_count}</td>
@@ -99,6 +85,7 @@ export default function WorkspaceRankingTable({ data }: WorkspaceRankingTablePro
           </tbody>
         </table>
       </div>
+      <Pagination total={total} offset={offset} limit={limit} onPageChange={onPageChange} />
     </div>
   );
 }

@@ -15,7 +15,7 @@ export default function Layout({ children }: LayoutProps) {
       </header>
       <main className="mx-auto max-w-7xl p-6">{children}</main>
       <footer className="border-t border-border py-4 text-center text-sm text-muted-foreground">
-        Contact: jisung.jang@samsung.com
+        SbioChat Dashboard
       </footer>
     </div>
   );

@@ -64,8 +64,15 @@ export interface PythonPackage {
   status_note: string | null;
 }
 
+export interface PaginatedResponse<T> {
+  total: number;
+  offset: number;
+  limit: number;
+  items: T[];
+}
+
 export const fetchOverview = () =>
-  api.get<OverviewStats>("/api/stats/overview").then((r) => r.data);
+  api.get<OverviewStats>("/api/v1/stats/overview").then((r) => r.data);
 
 export const fetchDailyStats = (from?: string, to?: string) => {
   const params = new URLSearchParams();
@@ -76,23 +83,31 @@ export const fetchDailyStats = (from?: string, to?: string) => {
     .then((r) => r.data);
 };
 
-export const fetchWorkspaceRanking = () =>
-  api.get<WorkspaceRanking[]>("/api/stats/workspace-ranking").then((r) => r.data);
+export const fetchWorkspaceRanking = (offset = 0, limit = 20) =>
+  api.get<PaginatedResponse<WorkspaceRanking>>(`/api/stats/workspace-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
 
-export const fetchDeveloperRanking = () =>
-  api.get<DeveloperRanking[]>("/api/stats/developer-ranking").then((r) => r.data);
+export const fetchDeveloperRanking = (offset = 0, limit = 20) =>
+  api.get<PaginatedResponse<DeveloperRanking>>(`/api/stats/developer-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
 
-export const fetchGroupRanking = () =>
-  api.get<GroupRanking[]>("/api/stats/group-ranking").then((r) => r.data);
+export const fetchGroupRanking = (offset = 0, limit = 20) =>
+  api.get<PaginatedResponse<GroupRanking>>(`/api/stats/group-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
 
 export const fetchPackages = () =>
-  api.get<PythonPackage[]>("/api/packages").then((r) => r.data);
+  api.get<PaginatedResponse<PythonPackage>>("/api/v1/packages?limit=200").then((r) => r.data.items);
 
 export const addPackage = (packageName: string, authUser: string) =>
-  api.post<PythonPackage>("/api/packages", { package_name: packageName }, { headers: { "X-Auth-User": authUser } }).then((r) => r.data);
+  api.post<PythonPackage>("/api/v1/packages", { package_name: packageName }, { headers: { "X-Auth-User": authUser } }).then((r) => r.data);
 
 export const deletePackage = (id: number, authUser: string) =>
   api.delete(`/api/packages/${id}`, { headers: { "X-Auth-User": authUser } }).then((r) => r.data);
 
 export const updatePackageStatus = (id: number, status: string, authUser: string, note?: string) =>
   api.patch(`/api/packages/${id}/status`, { status, status_note: note }, { headers: { "X-Auth-User": authUser } }).then((r) => r.data);
+
+export interface AuthMe {
+  user: string;
+  is_admin: boolean;
+}
+
+export const fetchAuthMe = (authUser: string) =>
+  api.get<AuthMe>("/api/v1/auth/me", { headers: { "X-Auth-User": authUser } }).then((r) => r.data);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Download, X, Info, Plus, Check, Ban, Clock, Loader2, Undo2, ExternalLink } from "lucide-react";
-import { fetchPackages, addPackage, deletePackage, updatePackageStatus, type PythonPackage } from "@/lib/api";
+import { fetchPackages, fetchAuthMe, addPackage, deletePackage, updatePackageStatus, type PythonPackage } from "@/lib/api";
+import { useToast } from "./Toast";
 
 interface RequirePackagesProps {
   currentUser: string;
@@ -13,23 +14,26 @@ const STATUS_CONFIG = {
   uninstalled: { icon: Undo2,  color: "text-zinc-400",    bg: "bg-zinc-400/10",    label: "Uninstalled" },
 } as const;
 
-// Hardcoded for now; in production this comes from /api/auth/me
-const ADMIN_USERS = ["jisung.jang"];
-
 export default function RequirePackages({ currentUser }: RequirePackagesProps) {
+  const { toast } = useToast();
   const [packages, setPackages] = useState<PythonPackage[]>([]);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTooltip, setShowTooltip] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const isAdmin = ADMIN_USERS.includes(currentUser);
+  useEffect(() => {
+    fetchAuthMe(currentUser)
+      .then((me) => setIsAdmin(me.is_admin))
+      .catch(() => setIsAdmin(false));
+  }, [currentUser]);
 
   useEffect(() => {
     fetchPackages()
       .then(setPackages)
-      .catch(() => {})
+      .catch((err) => setError(err?.response?.data?.detail || "Failed to load packages."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -42,8 +46,11 @@ export default function RequirePackages({ currentUser }: RequirePackagesProps) {
       const pkg = await addPackage(name, currentUser);
       setPackages((prev) => [pkg, ...prev]);
       setInput("");
+      toast(`Package '${name}' requested`, "success");
     } catch (e: any) {
-      setError(e.response?.data?.detail || "Failed to add package");
+      const msg = e.response?.data?.detail || "Failed to add package";
+      setError(msg);
+      toast(msg, "error");
     } finally {
       setSubmitting(false);
     }
@@ -54,8 +61,11 @@ export default function RequirePackages({ currentUser }: RequirePackagesProps) {
     try {
       await deletePackage(id, currentUser);
       setPackages((prev) => prev.filter((p) => p.id !== id));
+      toast("Package removed", "success");
     } catch (e: any) {
-      setError(e.response?.data?.detail || "Failed to delete package");
+      const msg = e.response?.data?.detail || "Failed to delete package";
+      setError(msg);
+      toast(msg, "error");
     }
   };
 
@@ -66,8 +76,11 @@ export default function RequirePackages({ currentUser }: RequirePackagesProps) {
       setPackages((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: status as PythonPackage["status"] } : p))
       );
+      toast(`Status updated to '${status}'`, "success");
     } catch (e: any) {
-      setError(e.response?.data?.detail || "Failed to update status");
+      const msg = e.response?.data?.detail || "Failed to update status";
+      setError(msg);
+      toast(msg, "error");
     }
   };
 

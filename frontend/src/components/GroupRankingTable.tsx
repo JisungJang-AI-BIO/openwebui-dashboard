@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { type GroupRanking } from "@/lib/api";
+import { SortIcon } from "@/lib/table-utils";
+import Pagination from "./Pagination";
 
 interface GroupRankingTableProps {
   data: GroupRanking[];
+  total: number;
+  offset: number;
+  limit: number;
+  onPageChange: (offset: number) => void;
 }
 
 type SortKey = "member_count" | "total_feedbacks" | "chats_per_member" | "messages_per_member";
-type SortDir = "asc" | "desc";
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "member_count", label: "Members" },
@@ -16,9 +20,9 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "total_feedbacks", label: "Total number of feedbacks" },
 ];
 
-export default function GroupRankingTable({ data }: GroupRankingTableProps) {
+export default function GroupRankingTable({ data, total, offset, limit, onPageChange }: GroupRankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("chats_per_member");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -34,13 +38,6 @@ export default function GroupRankingTable({ data }: GroupRankingTableProps) {
     const vb = b[sortKey];
     return sortDir === "desc" ? vb - va : va - vb;
   });
-
-  const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 opacity-40" />;
-    return sortDir === "desc"
-      ? <ArrowDown className="ml-1 inline h-3.5 w-3.5" />
-      : <ArrowUp className="ml-1 inline h-3.5 w-3.5" />;
-  };
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -63,7 +60,7 @@ export default function GroupRankingTable({ data }: GroupRankingTableProps) {
                   onClick={() => handleSort(col.key)}
                 >
                   {col.label}
-                  <SortIcon col={col.key} />
+                  <SortIcon col={col.key} sortKey={sortKey} sortDir={sortDir} />
                 </th>
               ))}
             </tr>
@@ -71,7 +68,7 @@ export default function GroupRankingTable({ data }: GroupRankingTableProps) {
           <tbody>
             {sorted.map((g, i) => (
               <tr key={g.group_id} className="border-b border-border/50 hover:bg-muted/50">
-                <td className="py-3 pr-4 text-muted-foreground font-mono">{i + 1}</td>
+                <td className="py-3 pr-4 text-muted-foreground font-mono">{offset + i + 1}</td>
                 <td className="py-3 pr-4 font-medium">{g.group_name}</td>
                 <td className="py-3 pr-4 text-right font-mono">{g.member_count}</td>
                 <td className="py-3 pr-4 text-right font-mono">{g.chats_per_member}</td>
@@ -87,6 +84,7 @@ export default function GroupRankingTable({ data }: GroupRankingTableProps) {
           </tbody>
         </table>
       </div>
+      <Pagination total={total} offset={offset} limit={limit} onPageChange={onPageChange} />
     </div>
   );
 }
