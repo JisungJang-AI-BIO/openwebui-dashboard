@@ -1,11 +1,12 @@
 #!/bin/bash
 # Open WebUI PostgreSQL backup script
+# Connects to the webui-db container on the openwebui-db_default network
 
 BACKUP_DIR="./backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-CONTAINER_NAME="openwebui-postgres"
-DB_USER="openwebui_admin"
-DB_NAME="openwebui"
+CONTAINER_NAME="webui-db"
+DB_USER="${DB_USER:-webui_user}"
+DB_NAME="${DB_NAME:-webui}"
 
 mkdir -p "$BACKUP_DIR"
 

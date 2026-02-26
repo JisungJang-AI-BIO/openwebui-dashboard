@@ -22,11 +22,11 @@ v1 = APIRouter(prefix="/api/v1")
 KST = timezone(timedelta(hours=9))
 
 # CORS Configuration
-FRONTEND_PORT_HOST = os.getenv("FRONTEND_PORT_HOST", "3005")
 origins = [
-    f"http://localhost:{FRONTEND_PORT_HOST}",
-    f"http://127.0.0.1:{FRONTEND_PORT_HOST}",
-    "http://localhost:80",
+    "https://openwebui.sbiologics.com",
+    "https://openwebui.sbiologics.com:30088",
+    "http://localhost:3005",
+    "http://127.0.0.1:3005",
 ]
 
 app.add_middleware(
@@ -38,11 +38,11 @@ app.add_middleware(
 )
 
 # Database Setup
-DB_USER = os.getenv("POSTGRES_USER", "postgres")
+DB_USER = os.getenv("POSTGRES_USER", "webui_user")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
-DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
+DB_HOST = os.getenv("POSTGRES_HOST", "webui-db")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "openwebui")
+DB_NAME = os.getenv("POSTGRES_DB", "webui")
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 

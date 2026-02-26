@@ -31,6 +31,9 @@ ENV/
 # VS Code
 .vscode/
 
+# Node
+node_modules/
+
 # Project Specific
 data/
 backups/

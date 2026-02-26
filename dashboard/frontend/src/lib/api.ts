@@ -1,9 +1,8 @@
 import axios from "axios";
 
-const BACKEND_PORT = 8005;
-const baseURL =
-  import.meta.env.VITE_API_BASE_URL ||
-  `${window.location.protocol}//${window.location.hostname}:${BACKEND_PORT}`;
+// Production: frontend and backend share the same nginx origin (empty baseURL).
+// Development: set VITE_API_BASE_URL=http://localhost:8005 in .env.local
+const baseURL = import.meta.env.VITE_API_BASE_URL || "";
 
 const api = axios.create({ baseURL });
 
