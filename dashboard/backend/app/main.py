@@ -160,15 +160,24 @@ def get_overview(response: Response, db: Session = Depends(get_db)):
             ),
             feedback_stats AS (
                 SELECT count(*) as total_feedbacks FROM feedback
+            ),
+            tool_stats AS (
+                SELECT count(*) as total_tools FROM tool
+            ),
+            function_stats AS (
+                SELECT count(*) as total_functions FROM function
             )
-        SELECT cs.total_chats, cs.total_messages, ms.total_models, fs.total_feedbacks
-        FROM chat_stats cs, model_stats ms, feedback_stats fs
+        SELECT cs.total_chats, cs.total_messages, ms.total_models, fs.total_feedbacks,
+               ts.total_tools, fns.total_functions
+        FROM chat_stats cs, model_stats ms, feedback_stats fs, tool_stats ts, function_stats fns
     """)).mappings().first()
     return {
         "total_chats": result["total_chats"],
         "total_messages": result["total_messages"] or 0,
         "total_models": result["total_models"],
         "total_feedbacks": result["total_feedbacks"],
+        "total_tools": result["total_tools"],
+        "total_functions": result["total_functions"],
     }
 
 
@@ -442,6 +451,100 @@ def get_group_ranking(
                 "total_feedbacks": int(row["total_feedbacks"]),
                 "chats_per_member": float(row["chats_per_member"] or 0),
                 "messages_per_member": float(row["messages_per_member"] or 0),
+            }
+            for row in rows
+        ],
+    }
+
+
+# ─── Tool & Function Registry ─────────────────────────────────────────
+
+@v1.get("/stats/tool-ranking")
+def get_tool_ranking(
+    response: Response,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """List registered tools with creator info."""
+    response.headers["Cache-Control"] = "public, max-age=60"
+    rows = db.execute(text("""
+        SELECT
+            t.id,
+            t.name,
+            u.name as creator_name,
+            u.email as creator_email,
+            to_timestamp(t.created_at) AT TIME ZONE 'Asia/Seoul' as created_at,
+            to_timestamp(t.updated_at) AT TIME ZONE 'Asia/Seoul' as updated_at,
+            count(*) OVER() as _total
+        FROM tool t
+        LEFT JOIN "user" u ON t.user_id = u.id
+        ORDER BY t.updated_at DESC
+        LIMIT :limit OFFSET :offset
+    """), {"limit": limit, "offset": offset}).mappings().all()
+
+    total = rows[0]["_total"] if rows else 0
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "items": [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "creator_name": row["creator_name"] or "",
+                "creator_email": row["creator_email"] or "",
+                "created_at": str(row["created_at"]),
+                "updated_at": str(row["updated_at"]),
+            }
+            for row in rows
+        ],
+    }
+
+
+@v1.get("/stats/function-ranking")
+def get_function_ranking(
+    response: Response,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """List registered functions (pipes, filters, actions) with creator info."""
+    response.headers["Cache-Control"] = "public, max-age=60"
+    rows = db.execute(text("""
+        SELECT
+            f.id,
+            f.name,
+            f.type,
+            f.is_active,
+            f.is_global,
+            u.name as creator_name,
+            u.email as creator_email,
+            to_timestamp(f.created_at) AT TIME ZONE 'Asia/Seoul' as created_at,
+            to_timestamp(f.updated_at) AT TIME ZONE 'Asia/Seoul' as updated_at,
+            count(*) OVER() as _total
+        FROM function f
+        LEFT JOIN "user" u ON f.user_id = u.id
+        ORDER BY f.updated_at DESC
+        LIMIT :limit OFFSET :offset
+    """), {"limit": limit, "offset": offset}).mappings().all()
+
+    total = rows[0]["_total"] if rows else 0
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "items": [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "type": row["type"],
+                "is_active": row["is_active"],
+                "is_global": row["is_global"],
+                "creator_name": row["creator_name"] or "",
+                "creator_email": row["creator_email"] or "",
+                "created_at": str(row["created_at"]),
+                "updated_at": str(row["updated_at"]),
             }
             for row in rows
         ],

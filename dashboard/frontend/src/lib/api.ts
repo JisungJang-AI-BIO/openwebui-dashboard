@@ -11,6 +11,8 @@ export interface OverviewStats {
   total_messages: number;
   total_models: number;
   total_feedbacks: number;
+  total_tools: number;
+  total_functions: number;
 }
 
 export interface DailyStat {
@@ -54,6 +56,27 @@ export interface GroupRanking {
   messages_per_member: number;
 }
 
+export interface ToolRanking {
+  id: string;
+  name: string;
+  creator_name: string;
+  creator_email: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FunctionRanking {
+  id: string;
+  name: string;
+  type: string;
+  is_active: boolean;
+  is_global: boolean;
+  creator_name: string;
+  creator_email: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PythonPackage {
   id: number;
   package_name: string;
@@ -90,6 +113,12 @@ export const fetchDeveloperRanking = (offset = 0, limit = 20) =>
 
 export const fetchGroupRanking = (offset = 0, limit = 20) =>
   api.get<PaginatedResponse<GroupRanking>>(`/api/v1/stats/group-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
+
+export const fetchToolRanking = (offset = 0, limit = 20) =>
+  api.get<PaginatedResponse<ToolRanking>>(`/api/v1/stats/tool-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
+
+export const fetchFunctionRanking = (offset = 0, limit = 20) =>
+  api.get<PaginatedResponse<FunctionRanking>>(`/api/v1/stats/function-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
 
 export const fetchPackages = () =>
   api.get<PaginatedResponse<PythonPackage>>("/api/v1/packages?limit=200").then((r) => r.data.items);
