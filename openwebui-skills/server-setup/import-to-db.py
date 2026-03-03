@@ -18,6 +18,7 @@ import re
 import json
 import time
 import glob
+import uuid
 from urllib.parse import urlparse
 
 # ── Config ──────────────────────────────────────────────────────────────────
@@ -104,6 +105,33 @@ def parse_tool_py(filepath):
     }
 
 
+# ── Access grant: public read, admin-only write ────────────────────────────
+def grant_public_read(cur, resource_type, resource_id, now):
+    """Insert a wildcard read grant so all users can view/use the resource.
+    Write access is NOT granted — only the owner and admins can edit.
+    """
+    # Check if grant already exists
+    cur.execute(
+        """
+        SELECT 1 FROM access_grant
+        WHERE resource_type = %s AND resource_id = %s
+          AND principal_type = 'user' AND principal_id = '*' AND permission = 'read'
+        """,
+        (resource_type, resource_id),
+    )
+    if cur.fetchone():
+        return
+
+    grant_id = str(uuid.uuid4())
+    cur.execute(
+        """
+        INSERT INTO access_grant (id, resource_type, resource_id, principal_type, principal_id, permission, created_at)
+        VALUES (%s, %s, %s, 'user', '*', 'read', %s)
+        """,
+        (grant_id, resource_type, resource_id, now),
+    )
+
+
 # ── Generate tool specs using OpenWebUI internals ──────────────────────────
 def generate_specs(tool_id, content):
     """Try to generate function-calling specs via OpenWebUI's internal modules.
@@ -159,6 +187,7 @@ def main():
 
         cur.execute("SELECT 1 FROM skill WHERE id = %s", (skill["id"],))
         if cur.fetchone():
+            grant_public_read(cur, "skill", skill["id"], now)
             print(f"  [SKIP] {skill['id']}")
             skill_skip += 1
             continue
@@ -180,6 +209,7 @@ def main():
                 now,
             ),
         )
+        grant_public_read(cur, "skill", skill["id"], now)
         print(f"  [OK]   {skill['id']}")
         skill_ok += 1
 
@@ -194,6 +224,7 @@ def main():
 
         cur.execute("SELECT 1 FROM tool WHERE id = %s", (tool["id"],))
         if cur.fetchone():
+            grant_public_read(cur, "tool", tool["id"], now)
             print(f"  [SKIP] {tool['id']}")
             tool_skip += 1
             continue
@@ -219,6 +250,7 @@ def main():
                 now,
             ),
         )
+        grant_public_read(cur, "tool", tool["id"], now)
         print(f"  [OK]   {tool['id']} ({tool['name']})")
         tool_ok += 1
 
