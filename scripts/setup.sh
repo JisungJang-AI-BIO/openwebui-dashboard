@@ -120,9 +120,14 @@ curl -sf http://127.0.0.1:10086/health 2>/dev/null && echo "" || echo "    Not r
 echo "  GPU inside container:"
 docker exec open-webui nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null || echo "    GPU not accessible"
 
-# ----- Step 5: nginx reminder -----
+# ----- Step 5: Import Skills & Tools -----
 echo ""
-echo "[Step 5] nginx configuration"
+echo "[Step 5] Importing Skills & Tools..."
+bash "$SCRIPT_DIR/import-skills-tools.sh" open-webui || true
+
+# ----- Step 6: nginx reminder -----
+echo ""
+echo "[Step 6] nginx configuration"
 echo "  sudo cp ${PROJECT_DIR}/nginx/openwebui.conf /etc/nginx/conf.d/openwebui.conf"
 echo "  sudo nginx -t && sudo systemctl reload nginx"
 echo ""
