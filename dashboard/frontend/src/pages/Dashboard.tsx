@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { MessagesSquare, MessageSquare, Bot, ThumbsUp, Wrench, Puzzle } from "lucide-react";
+import { MessagesSquare, MessageSquare, Bot, ThumbsUp, Wrench, Puzzle, Sparkles } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import DailyChart from "@/components/DailyChart";
 import WorkspaceRankingTable from "@/components/WorkspaceRankingTable";
@@ -8,15 +8,16 @@ import DeveloperRankingTable from "@/components/DeveloperRankingTable";
 import GroupRankingTable from "@/components/GroupRankingTable";
 import ToolRankingTable from "@/components/ToolRankingTable";
 import FunctionRankingTable from "@/components/FunctionRankingTable";
+import SkillRankingTable from "@/components/SkillRankingTable";
 import RequirePackages from "@/components/RequirePackages";
 import MockAuthBanner from "@/components/MockAuthBanner";
 import {
   fetchOverview, fetchDailyStats, fetchWorkspaceRanking,
   fetchDeveloperRanking, fetchGroupRanking,
-  fetchToolRanking, fetchFunctionRanking,
+  fetchToolRanking, fetchFunctionRanking, fetchSkillRanking,
   type OverviewStats, type DailyStat,
   type WorkspaceRanking, type DeveloperRanking, type GroupRanking,
-  type ToolRanking, type FunctionRanking,
+  type ToolRanking, type FunctionRanking, type SkillRanking,
 } from "@/lib/api";
 
 const PAGE_SIZE = 20;
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [groups, setGroups] = useState<GroupRanking[]>([]);
   const [tools, setTools] = useState<ToolRanking[]>([]);
   const [functions, setFunctions] = useState<FunctionRanking[]>([]);
+  const [skills, setSkills] = useState<SkillRanking[]>([]);
   const [mockUser, setMockUser] = useState(() => localStorage.getItem("mockUser") || "jisung.jang");
   const [searchParams, setSearchParams] = useSearchParams();
   const dateFrom = searchParams.get("from") || kstDate(-7);
@@ -52,6 +54,8 @@ export default function Dashboard() {
   const [toolTotal, setToolTotal] = useState(0);
   const [fnOffset, setFnOffset] = useState(0);
   const [fnTotal, setFnTotal] = useState(0);
+  const [skillOffset, setSkillOffset] = useState(0);
+  const [skillTotal, setSkillTotal] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -62,6 +66,7 @@ export default function Dashboard() {
       fetchGroupRanking(0, PAGE_SIZE).then((res) => { setGroups(res.items); setGrpTotal(res.total); }),
       fetchToolRanking(0, PAGE_SIZE).then((res) => { setTools(res.items); setToolTotal(res.total); }),
       fetchFunctionRanking(0, PAGE_SIZE).then((res) => { setFunctions(res.items); setFnTotal(res.total); }),
+      fetchSkillRanking(0, PAGE_SIZE).then((res) => { setSkills(res.items); setSkillTotal(res.total); }),
     ])
       .catch((err) => setError(err?.message || "Failed to load dashboard data."))
       .finally(() => setLoading(false));
@@ -93,6 +98,10 @@ export default function Dashboard() {
   const handleFnPage = (newOffset: number) => {
     setFnOffset(newOffset);
     fetchFunctionRanking(newOffset, PAGE_SIZE).then((res) => { setFunctions(res.items); setFnTotal(res.total); });
+  };
+  const handleSkillPage = (newOffset: number) => {
+    setSkillOffset(newOffset);
+    fetchSkillRanking(newOffset, PAGE_SIZE).then((res) => { setSkills(res.items); setSkillTotal(res.total); });
   };
 
   if (loading) {
@@ -126,6 +135,7 @@ export default function Dashboard() {
         <StatCard title="Feedbacks" value={overview?.total_feedbacks ?? 0} icon={ThumbsUp} />
         <StatCard title="Tools" value={overview?.total_tools ?? 0} icon={Wrench} />
         <StatCard title="Functions" value={overview?.total_functions ?? 0} icon={Puzzle} />
+        <StatCard title="Skills" value={overview?.total_skills ?? 0} icon={Sparkles} />
       </div>
       <DailyChart data={daily} dateFrom={dateFrom} dateTo={dateTo} onDateChange={handleDateChange} />
       <WorkspaceRankingTable data={workspaces} total={wsTotal} offset={wsOffset} limit={PAGE_SIZE} onPageChange={handleWsPage} />
@@ -133,6 +143,7 @@ export default function Dashboard() {
       <GroupRankingTable data={groups} total={grpTotal} offset={grpOffset} limit={PAGE_SIZE} onPageChange={handleGrpPage} />
       <ToolRankingTable data={tools} total={toolTotal} offset={toolOffset} limit={PAGE_SIZE} onPageChange={handleToolPage} />
       <FunctionRankingTable data={functions} total={fnTotal} offset={fnOffset} limit={PAGE_SIZE} onPageChange={handleFnPage} />
+      <SkillRankingTable data={skills} total={skillTotal} offset={skillOffset} limit={PAGE_SIZE} onPageChange={handleSkillPage} />
       <RequirePackages currentUser={mockUser} />
       <MockAuthBanner user={mockUser} onChangeUser={(u) => { setMockUser(u); localStorage.setItem("mockUser", u); }} />
     </div>

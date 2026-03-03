@@ -45,6 +45,15 @@ else
     exit 1
 fi
 
+SKILLS_DIR="${PROJECT_DIR}/openwebui-skills"
+if [[ -d "$SKILLS_DIR" && -f "$SKILLS_DIR/Dockerfile" ]]; then
+    echo "  OpenWebUI-Skills: ${SKILLS_DIR} (found)"
+else
+    echo "  ERROR: openwebui-skills/ directory not found at $SKILLS_DIR"
+    echo "  Ensure the openwebui-skills/ subdirectory exists with Dockerfile."
+    exit 1
+fi
+
 # ----- Step 1: Verify files -----
 echo ""
 echo "[Step 1] Project directory: ${PROJECT_DIR}"
@@ -75,10 +84,9 @@ fi
 
 # ----- Step 3: Build and start all services -----
 echo ""
-echo "[Step 3] Building dashboard images and pulling Open WebUI..."
+echo "[Step 3] Building all images (OpenWebUI-Skills + Dashboard)..."
 
 docker compose build
-docker compose pull open-webui
 docker compose up -d
 
 echo "  Waiting for services to start..."
@@ -132,5 +140,5 @@ echo ""
 echo " Logs:    docker compose logs -f"
 echo " Restart: docker compose restart"
 echo " Stop:    docker compose down"
-echo " Update:  docker compose pull && docker compose build && docker compose up -d"
+echo " Update:  docker compose build && docker compose up -d"
 echo ""

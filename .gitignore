@@ -40,3 +40,8 @@ backups/
 .env.local
 .DS_Store
 .webui_secret_key
+
+# OpenWebUI-Skills build artifacts
+openwebui-skills/vendor/
+openwebui-skills/tools/__pycache__/
+openwebui-skills/tests/output/

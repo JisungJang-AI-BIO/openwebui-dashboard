@@ -2,7 +2,7 @@ services:
   # ─── Open WebUI (CUDA + Skills) ─────────────────────────────
   open-webui:
     build:
-      context: ../OpenWebUI-Skills
+      context: ./openwebui-skills
       args:
         BASE_IMAGE: ghcr.io/open-webui/open-webui:cuda
     image: openwebui-skills:cuda
@@ -78,11 +78,87 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ─── Staging: PostgreSQL (profile=staging) ──────────────────
+  webui-db-staging:
+    image: pgvector/pgvector:pg18
+    container_name: webui-db-staging
+    profiles: ["staging"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${STAGING_DB_PORT:-5433}:5432"
+    volumes:
+      - webui-db-staging-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${DB_USER:-webui_user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME:-webui}
+    networks:
+      - staging-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-webui_user} -d ${DB_NAME:-webui}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Staging: Open WebUI (profile=staging) ─────────────────
+  open-webui-staging:
+    image: openwebui-skills:cuda
+    container_name: open-webui-staging
+    profiles: ["staging"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${STAGING_WEBUI_PORT:-10088}:8080"
+    volumes:
+      - open-webui-staging-data:/app/backend/data
+    networks:
+      - staging-net
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-webui_user}:${DB_PASSWORD}@webui-db-staging:5432/${DB_NAME:-webui}
+      - PGVECTOR_DB_URL=postgresql://${DB_USER:-webui_user}:${DB_PASSWORD}@webui-db-staging:5432/${DB_NAME:-webui}
+      - VECTOR_DB=pgvector
+      - WEBUI_URL=${STAGING_WEBUI_URL:-http://localhost:10088}
+      - ENABLE_LOGIN_FORM=true
+      - ENABLE_OAUTH_SIGNUP=true
+      - ENABLE_OAUTH_PERSISTENT_CONFIG=false
+      - GLOBAL_LOG_LEVEL=DEBUG
+    depends_on:
+      webui-db-staging:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 networks:
   webui-db-net:
     external: true
     name: openwebui-db_default
+  staging-net:
+    name: openwebui-staging
 
 volumes:
   open-webui-data:
     name: open-webui-data
+  webui-db-staging-data:
+    name: webui-db-staging-data
+  open-webui-staging-data:
+    name: open-webui-staging-data

@@ -13,6 +13,7 @@ export interface OverviewStats {
   total_feedbacks: number;
   total_tools: number;
   total_functions: number;
+  total_skills: number;
 }
 
 export interface DailyStat {
@@ -77,6 +78,17 @@ export interface FunctionRanking {
   updated_at: string;
 }
 
+export interface SkillRanking {
+  id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+  creator_name: string;
+  creator_email: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PythonPackage {
   id: number;
   package_name: string;
@@ -119,6 +131,9 @@ export const fetchToolRanking = (offset = 0, limit = 20) =>
 
 export const fetchFunctionRanking = (offset = 0, limit = 20) =>
   api.get<PaginatedResponse<FunctionRanking>>(`/api/v1/stats/function-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
+
+export const fetchSkillRanking = (offset = 0, limit = 20) =>
+  api.get<PaginatedResponse<SkillRanking>>(`/api/v1/stats/skill-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
 
 export const fetchPackages = () =>
   api.get<PaginatedResponse<PythonPackage>>("/api/v1/packages?limit=200").then((r) => r.data.items);

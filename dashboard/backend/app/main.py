@@ -166,10 +166,13 @@ def get_overview(response: Response, db: Session = Depends(get_db)):
             ),
             function_stats AS (
                 SELECT count(*) as total_functions FROM function
+            ),
+            skill_stats AS (
+                SELECT count(*) as total_skills FROM skill
             )
         SELECT cs.total_chats, cs.total_messages, ms.total_models, fs.total_feedbacks,
-               ts.total_tools, fns.total_functions
-        FROM chat_stats cs, model_stats ms, feedback_stats fs, tool_stats ts, function_stats fns
+               ts.total_tools, fns.total_functions, ss.total_skills
+        FROM chat_stats cs, model_stats ms, feedback_stats fs, tool_stats ts, function_stats fns, skill_stats ss
     """)).mappings().first()
     return {
         "total_chats": result["total_chats"],
@@ -178,6 +181,7 @@ def get_overview(response: Response, db: Session = Depends(get_db)):
         "total_feedbacks": result["total_feedbacks"],
         "total_tools": result["total_tools"],
         "total_functions": result["total_functions"],
+        "total_skills": result["total_skills"],
     }
 
 
@@ -541,6 +545,53 @@ def get_function_ranking(
                 "type": row["type"],
                 "is_active": row["is_active"],
                 "is_global": row["is_global"],
+                "creator_name": row["creator_name"] or "",
+                "creator_email": row["creator_email"] or "",
+                "created_at": str(row["created_at"]),
+                "updated_at": str(row["updated_at"]),
+            }
+            for row in rows
+        ],
+    }
+
+
+@v1.get("/stats/skill-ranking")
+def get_skill_ranking(
+    response: Response,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """List registered skills with creator info."""
+    response.headers["Cache-Control"] = "public, max-age=60"
+    rows = db.execute(text("""
+        SELECT
+            s.id,
+            s.name,
+            s.description,
+            s.is_active,
+            u.name as creator_name,
+            u.email as creator_email,
+            to_timestamp(s.created_at) AT TIME ZONE 'Asia/Seoul' as created_at,
+            to_timestamp(s.updated_at) AT TIME ZONE 'Asia/Seoul' as updated_at,
+            count(*) OVER() as _total
+        FROM skill s
+        LEFT JOIN "user" u ON s.user_id = u.id
+        ORDER BY s.updated_at DESC
+        LIMIT :limit OFFSET :offset
+    """), {"limit": limit, "offset": offset}).mappings().all()
+
+    total = rows[0]["_total"] if rows else 0
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "items": [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "description": (row["description"] or "")[:120],
+                "is_active": row["is_active"],
                 "creator_name": row["creator_name"] or "",
                 "creator_email": row["creator_email"] or "",
                 "created_at": str(row["created_at"]),

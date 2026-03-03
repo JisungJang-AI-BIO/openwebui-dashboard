@@ -1,0 +1,9 @@
+.git
+.gitignore
+vendor/
+__pycache__
+*.pyc
+.claude/
+PORTING_PLAN.md
+DESIGN_DECISIONS.md
+README.md

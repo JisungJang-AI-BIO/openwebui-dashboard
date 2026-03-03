@@ -1,6 +1,6 @@
 # Open WebUI Docker with Dashboard
 
-Docker Compose deployment for [Open WebUI](https://github.com/open-webui/open-webui) with OKTA OIDC SSO, NVIDIA GPU support, and an integrated analytics dashboard — all connecting to a shared PostgreSQL (pgvector) database.
+Docker Compose deployment for [Open WebUI](https://github.com/open-webui/open-webui) with OKTA OIDC SSO, NVIDIA GPU support, [OpenWebUI-Skills](https://github.com/JisungJang-AI-BIO/OpenWebUI-Skills) integration, and an integrated analytics dashboard — all connecting to a shared PostgreSQL (pgvector) database.
 
 ## Architecture
 
@@ -42,19 +42,35 @@ All services join the pre-existing `openwebui-db_default` Docker network where t
 
 | Service | Container | Image / Build | Host Port | Description |
 |---------|-----------|--------------|-----------|-------------|
-| Open WebUI | `open-webui` | `ghcr.io/open-webui/open-webui:cuda` | 10085 | LLM chat UI with OKTA SSO and GPU inference |
+| Open WebUI | `open-webui` | `openwebui-skills:cuda` (custom build from `./openwebui-skills`) | 10085 | LLM chat UI with OKTA SSO, GPU inference, and Skills |
 | Dashboard Backend | `dashboard-backend` | `./dashboard/backend` (FastAPI) | 10086 | Analytics API — reads Open WebUI tables |
 | Dashboard Frontend | `dashboard-frontend` | `./dashboard/frontend` (React → nginx) | 10087 | Analytics UI — served as static build |
+
+### OpenWebUI-Skills Integration
+
+The Open WebUI service uses a **custom Docker image** built from the embedded `openwebui-skills/` directory (originally from [OpenWebUI-Skills](https://github.com/JisungJang-AI-BIO/OpenWebUI-Skills)). This extends the official `ghcr.io/open-webui/open-webui:cuda` image with:
+
+- **LibreOffice** — document conversion (DOCX→PDF, formula recalculation)
+- **Pandoc** — format conversion (DOCX→HTML/MD/TXT)
+- **Tesseract OCR** (eng+kor) — scanned PDF text recognition
+- **Node.js + docx** — DOCX document creation
+- **Poppler / qpdf** — PDF utilities
+- **Korean fonts** (Nanum) — Korean document rendering
+- **6 Python Tools**: docx, pdf, pptx, xlsx, gif-creator, webapp-testing
+- **15 Skills**: document workflows, design, creative, and productivity prompts
 
 All host ports bind to `127.0.0.1` only. External access is handled by the host nginx reverse proxy.
 
 ## Dashboard Features
 
-- **Overview Stats** — total chats, messages, workspaces, feedbacks
+- **Overview Stats** — total chats, messages, workspaces, feedbacks, tools, functions, skills
 - **Daily Usage Chart** — line chart with date range picker (KST)
 - **Workspace Ranking** — chat/message/user counts, feedback rating per workspace
 - **Developer Ranking** — aggregated metrics per workspace developer
 - **Group Ranking** — team usage metrics with per-member averages
+- **Tool Registry** — registered Tools with creator info (from OpenWebUI-Skills)
+- **Function Registry** — registered Functions (pipes, filters, actions) with creator info
+- **Skill Registry** — registered Skills (markdown prompts) with description and active status
 - **Python Package Requests** — users request packages, admins manage status (pending/installed/rejected/uninstalled), export as `requirements.txt`
 
 ## Prerequisites
@@ -87,10 +103,10 @@ bash scripts/setup.sh
 ```
 
 The setup script will:
-1. Verify Docker, Compose, GPU, and the `openwebui-db_default` network
+1. Verify Docker, Compose, GPU, the `openwebui-db_default` network, and `openwebui-skills/` directory
 2. Generate `WEBUI_SECRET_KEY` if not set
-3. Build dashboard images and pull the Open WebUI CUDA image
-4. Start all services and run health checks
+3. Build all images (custom OpenWebUI-Skills + dashboard) and start services
+4. Run health checks and verify GPU access
 
 ### 3. Configure nginx
 
@@ -119,9 +135,17 @@ Access URLs:
 
 ```
 openwebui-docker-with-dashboard/
-├── docker-compose.yml          # 3 services: open-webui, dashboard-backend, dashboard-frontend
+├── docker-compose.yml          # 3 services (build context: ./openwebui-skills)
 ├── .env.example                # Environment template (secrets redacted)
 ├── .dockerignore
+├── openwebui-skills/           # Custom OpenWebUI image build context
+│   ├── Dockerfile              # Extends official CUDA image with Skills deps
+│   ├── requirements.txt        # Python dependencies for tools
+│   ├── tools/                  # 6 Python tool files (docx, pdf, pptx, xlsx, gif, webapp)
+│   ├── skills/                 # 15 markdown skill files
+│   ├── server-setup/           # Setup scripts (system deps, vendor clone)
+│   ├── tests/                  # Test files and sample documents
+│   └── INSTALLATION_GUIDE.md   # Skills & Tools registration guide
 ├── dashboard/
 │   ├── backend/
 │   │   ├── Dockerfile          # Python 3.11 + FastAPI
@@ -144,6 +168,9 @@ openwebui-docker-with-dashboard/
 │           │   ├── WorkspaceRankingTable.tsx
 │           │   ├── DeveloperRankingTable.tsx
 │           │   ├── GroupRankingTable.tsx
+│           │   ├── ToolRankingTable.tsx
+│           │   ├── FunctionRankingTable.tsx
+│           │   ├── SkillRankingTable.tsx
 │           │   ├── RequirePackages.tsx
 │           │   └── MockAuthBanner.tsx
 │           └── pages/
@@ -152,10 +179,12 @@ openwebui-docker-with-dashboard/
 │   └── openwebui.conf          # Host nginx: 443 (WebUI) + 30088 (Dashboard)
 ├── scripts/
 │   ├── setup.sh                # Automated deployment script
-│   └── backup_db.sh            # PostgreSQL backup with 7-day retention
+│   ├── backup_db.sh            # PostgreSQL backup with 7-day retention
+│   └── clone-db-to-staging.sh  # Clone production DB → staging
 └── docs/
     ├── postgresql-backup-guide.md
     ├── sso-integration-guide.md
+    ├── openwebui-upgrade-guide.md
     └── development-sop.md
 ```
 
@@ -179,6 +208,9 @@ openwebui-docker-with-dashboard/
 | `DASHBOARD_AUTH_MODE` | `mock` | `mock` for dev, `sso` for production |
 | `DASHBOARD_ADMIN_USERS` | `jisung.jang` | Comma-separated admin usernames |
 | `GLOBAL_LOG_LEVEL` | `DEBUG` | Open WebUI log level |
+| `STAGING_DB_PORT` | `5433` | Staging PostgreSQL host port |
+| `STAGING_WEBUI_PORT` | `10088` | Staging Open WebUI host port |
+| `STAGING_WEBUI_URL` | `http://localhost:10088` | Staging Open WebUI public URL (for OAuth callback) |
 
 See [.env.example](.env.example) for the full list with comments.
 
@@ -206,6 +238,9 @@ Both ports use TLS 1.3 with a wildcard certificate.
 | GET | `/api/stats/workspace-ranking` | No | Workspace metrics with feedback rating |
 | GET | `/api/stats/developer-ranking` | No | Developer aggregated metrics |
 | GET | `/api/stats/group-ranking` | No | Group metrics with per-member averages |
+| GET | `/api/stats/tool-ranking` | No | Registered tools with creator info |
+| GET | `/api/stats/function-ranking` | No | Registered functions (pipes, filters, actions) |
+| GET | `/api/stats/skill-ranking` | No | Registered skills with description and creator info |
 | GET | `/api/auth/me` | Yes | Current user info + admin flag |
 | GET | `/api/packages` | No | List all requested packages |
 | POST | `/api/packages` | Yes | Request a new package |
@@ -225,8 +260,7 @@ Creates a compressed dump in `./backups/` with automatic cleanup of backups olde
 ### Update
 
 ```bash
-docker compose pull              # Pull latest Open WebUI image
-docker compose build             # Rebuild dashboard images
+docker compose build             # Rebuild all images (OpenWebUI-Skills + dashboard)
 docker compose up -d             # Recreate changed containers
 ```
 
@@ -249,6 +283,31 @@ docker compose down              # Stop and remove containers
 
 **Never use `docker compose down -v`** — the `-v` flag deletes named volumes and causes permanent data loss.
 
+## Staging Environment
+
+A staging environment with a **separate DB + Open WebUI** is available for SSO testing without affecting production. It uses Docker Compose [profiles](https://docs.docker.com/compose/how-tos/profiles/) — staging containers are excluded from normal `docker compose up`.
+
+```bash
+# Clone production DB and start staging (one command)
+bash scripts/clone-db-to-staging.sh
+
+# Access staging Open WebUI
+curl http://127.0.0.1:10088/health
+
+# Stop staging (preserves data)
+docker compose --profile staging down
+
+# Reset staging completely (deletes staging DB + data volumes)
+docker compose --profile staging down -v
+```
+
+| Service | Container | Port | Network |
+|---------|-----------|------|---------|
+| Staging DB | `webui-db-staging` | 5433 | `openwebui-staging` |
+| Staging WebUI | `open-webui-staging` | 10088 | `openwebui-staging` |
+
+The staging Open WebUI sets `ENABLE_OAUTH_PERSISTENT_CONFIG=false` so environment variables always take precedence over DB-stored SSO settings.
+
 ## Rollback
 
 All rollback targets the current deployment (port 10085). The previous conda-based services remain independent.
@@ -267,8 +326,21 @@ All rollback targets the current deployment (port 10085). The previous conda-bas
 | `*.blob.core.windows.net` | 443 | Image layer storage (Azure) |
 | Inbound `30088` | TCP | Dashboard web access |
 
+## Post-Deployment: Register Skills & Tools
+
+After Open WebUI is running, register the Skills and Tools from the OpenWebUI-Skills repo via the Open WebUI admin UI:
+
+1. **Import Skills** — Workspace > Skills > Import → upload `.md` files from `openwebui-skills/skills/`
+2. **Register Tools** — Workspace > Tools > Create → paste contents of each `openwebui-skills/tools/*.py` file
+3. **Configure Valves** — click the gear icon on each Tool and set paths (e.g., `SCRIPTS_DIR: /app/OpenWebUI-Skills/vendor/docx`)
+4. **Attach to Models** — Workspace > Models > Edit → check desired Skills & Tools
+
+See [openwebui-skills/INSTALLATION_GUIDE.md](openwebui-skills/INSTALLATION_GUIDE.md) for detailed registration steps.
+
 ## Documentation
 
 - [docs/postgresql-backup-guide.md](docs/postgresql-backup-guide.md) — DB backup/restore guide
 - [docs/sso-integration-guide.md](docs/sso-integration-guide.md) — OKTA SSO integration guide
+- [docs/openwebui-upgrade-guide.md](docs/openwebui-upgrade-guide.md) — Open WebUI upgrade guide
 - [docs/development-sop.md](docs/development-sop.md) — Development standard operating procedure
+- [openwebui-skills/INSTALLATION_GUIDE.md](openwebui-skills/INSTALLATION_GUIDE.md) — Skills & Tools registration guide
