@@ -99,7 +99,7 @@ class EventEmitter:
             import httpx
             import jwt
 
-            user_id = self.user.get("id", "")
+            user_id = self.user.get("id", "") if isinstance(self.user, dict) else getattr(self.user, "id", "")
             secret = os.environ.get("WEBUI_SECRET_KEY", "")
             if not user_id or not secret:
                 return None
