@@ -112,20 +112,11 @@ for i in $(seq 1 6); do
     fi
 done
 
-# ----- Step 6 (optional): Import Skills & Tools -----
+# ----- Step 6: Import Skills & Tools -----
 echo ""
-echo "[Step 6] Import Skills & Tools"
+echo "[Step 6] Importing Skills & Tools into staging..."
 
-STAGING_URL="http://127.0.0.1:${STAGING_WEBUI_PORT:-10088}"
-
-if [[ -n "${OPENWEBUI_API_KEY:-}" ]]; then
-    echo "  API key found. Importing skills and tools..."
-    bash "$SCRIPT_DIR/import-skills-tools.sh" "$STAGING_URL" "$OPENWEBUI_API_KEY" || true
-else
-    echo "  [SKIP] No OPENWEBUI_API_KEY set."
-    echo "  To auto-import, run:"
-    echo "    OPENWEBUI_API_KEY=<your-key> bash scripts/import-skills-tools.sh $STAGING_URL"
-fi
+bash "$SCRIPT_DIR/import-skills-tools.sh" open-webui-staging || true
 
 # ----- Done -----
 echo ""
@@ -133,11 +124,8 @@ echo "============================================"
 echo " Staging environment ready!"
 echo "============================================"
 echo ""
-echo " Staging Open WebUI: $STAGING_URL"
+echo " Staging Open WebUI: http://127.0.0.1:${STAGING_WEBUI_PORT:-10088}"
 echo " Staging DB:         127.0.0.1:${STAGING_DB_PORT:-5433}"
-echo ""
-echo " To import skills/tools (if not done above):"
-echo "   bash scripts/import-skills-tools.sh $STAGING_URL <api_key>"
 echo ""
 echo " To test SSO, set these env vars in .env and restart:"
 echo "   STAGING_WEBUI_URL=https://your-staging-url"

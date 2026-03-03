@@ -332,11 +332,12 @@ All rollback targets the current deployment (port 10085). The previous conda-bas
 ### Automated Import (Recommended)
 
 ```bash
-# Get your API key from: Open WebUI > Settings > Account > API Keys
-bash scripts/import-skills-tools.sh http://127.0.0.1:10085 <your-api-key>
+# No API key needed — runs directly inside the container
+bash scripts/import-skills-tools.sh                     # production
+bash scripts/import-skills-tools.sh open-webui-staging  # staging
 ```
 
-The script reads all `openwebui-skills/skills/*.md` and `openwebui-skills/tools/*.py` files, parses their metadata, and registers them via the Open WebUI API. Existing entries are skipped.
+The script runs inside the OpenWebUI container, reads the bundled skill/tool files, and inserts them directly into the database. Existing entries are skipped. Requires at least one admin account to exist.
 
 ### Manual Import
 
