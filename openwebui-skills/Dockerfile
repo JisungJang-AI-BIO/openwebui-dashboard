@@ -57,5 +57,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # --- Anthropic vendor scripts ---
 RUN bash server-setup/clone-anthropic-scripts.sh /app/OpenWebUI-Skills
 
-# Do NOT set WORKDIR here — the base OpenWebUI image expects to start
-# from its own working directory (where start.sh lives).
+# Restore base image's working directory so start.sh is found on container startup
+WORKDIR /app/backend
