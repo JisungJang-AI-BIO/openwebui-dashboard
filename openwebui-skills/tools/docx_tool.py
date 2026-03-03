@@ -756,7 +756,13 @@ Packer.toBuffer(doc).then(buffer => {{
         # Metadata
         author = "User"
         if user:
-            author = user.get("name", user.get("valves", {}).get("AUTHOR_NAME", "User")) if isinstance(user, dict) else "User"
+            if isinstance(user, dict):
+                author = user.get("name", "User")
+                valves = user.get("valves")
+                if valves:
+                    author = getattr(valves, "AUTHOR_NAME", author) if not isinstance(valves, dict) else valves.get("AUTHOR_NAME", author)
+            else:
+                author = getattr(user, "name", "User")
         doc.core_properties.author = author
 
         doc.save(output_path)
