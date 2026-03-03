@@ -19,6 +19,7 @@ import json
 import time
 import glob
 import uuid
+import ast
 from urllib.parse import urlparse
 
 # ── Config ──────────────────────────────────────────────────────────────────
@@ -132,23 +133,114 @@ def grant_public_read(cur, resource_type, resource_id, now):
     )
 
 
-# ── Generate tool specs using OpenWebUI internals ──────────────────────────
+# ── Generate tool specs via AST parsing ──────────────────────────────────
+# Maps Python type annotations → JSON Schema type strings
+_TYPE_MAP = {
+    "str": "string",
+    "int": "integer",
+    "float": "number",
+    "bool": "boolean",
+    "list": "array",
+    "List": "array",
+    "dict": "object",
+    "Dict": "object",
+}
+
+# Parameters injected by OpenWebUI runtime — not part of the tool's public API
+_SKIP_PARAMS = {"self", "__user__", "__event_emitter__", "__event_call__"}
+
+
+def _annotation_to_type(node):
+    """Convert an AST annotation node to a JSON Schema type string."""
+    if isinstance(node, ast.Name):
+        return _TYPE_MAP.get(node.id, "string")
+    if isinstance(node, ast.Constant):
+        return _TYPE_MAP.get(str(node.value), "string")
+    if isinstance(node, ast.Attribute):
+        return _TYPE_MAP.get(node.attr, "string")
+    if isinstance(node, ast.Subscript):
+        # Optional[X] → unwrap to type of X
+        if isinstance(node.value, ast.Name) and node.value.id == "Optional":
+            return _annotation_to_type(node.slice)
+        if isinstance(node.value, ast.Name):
+            return _TYPE_MAP.get(node.value.id, "string")
+    return "string"
+
+
 def generate_specs(tool_id, content):
-    """Try to generate function-calling specs via OpenWebUI's internal modules.
-    Falls back to empty list if unavailable (tools still work after UI re-save).
+    """Generate function-calling specs by parsing the Tool source with AST.
+
+    Previous approach used OpenWebUI internals (load_tool_module_by_id +
+    get_tool_specs) which produced WRONG specs in the standalone docker-exec
+    context — e.g. Python tuple methods (count, index) instead of actual
+    Tool class methods.  AST parsing avoids importing the module entirely.
     """
     try:
-        sys.path.insert(0, "/app/backend")
-        from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
-        from open_webui.utils.tools import get_tool_specs
-
-        replaced = replace_imports(content)
-        module = load_tool_module_by_id(tool_id, content=replaced)
-        specs = get_tool_specs(module)
-        return specs
-    except Exception as e:
-        print(f"    (specs fallback: {e})")
+        tree = ast.parse(content)
+    except SyntaxError as e:
+        print(f"    (specs: syntax error in {tool_id}: {e})")
         return []
+
+    # Find the Tools class
+    tools_cls = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == "Tools":
+            tools_cls = node
+            break
+
+    if tools_cls is None:
+        print(f"    (specs: no Tools class in {tool_id})")
+        return []
+
+    specs = []
+    for item in tools_cls.body:
+        if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if item.name.startswith("_"):
+            continue
+
+        # Method docstring — use first line as description
+        docstring = ast.get_docstring(item) or ""
+        description = docstring.strip().split("\n")[0] if docstring else item.name
+
+        # Build parameter schema
+        properties = {}
+        required = []
+
+        args = item.args
+        num_positional = len(args.args)
+        num_defaults = len(args.defaults)
+        first_default_idx = num_positional - num_defaults
+
+        for i, arg in enumerate(args.args):
+            if arg.arg in _SKIP_PARAMS:
+                continue
+
+            param_type = "string"
+            if arg.annotation:
+                param_type = _annotation_to_type(arg.annotation)
+
+            properties[arg.arg] = {
+                "type": param_type,
+                "description": arg.arg,
+            }
+
+            # Required if no default value
+            if i < first_default_idx:
+                required.append(arg.arg)
+
+        spec = {
+            "name": item.name,
+            "description": description,
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+                "required": required,
+            },
+        }
+        specs.append(spec)
+
+    return specs
 
 
 # ── Main ────────────────────────────────────────────────────────────────────
@@ -264,10 +356,11 @@ def main():
     print(" Done!")
 
     if tool_ok > 0:
-        print("\n  Next steps:")
+        print("\n  Next steps (configure Valves for each tool):")
         print("    1. Open WebUI > Workspace > Tools")
         print("    2. Click gear icon on each tool")
         print("    3. Set SCRIPTS_DIR: /app/OpenWebUI-Skills/vendor/<toolname>")
+        print("  (Function-calling specs are auto-generated from source.)")
 
     print("=" * 50)
 
