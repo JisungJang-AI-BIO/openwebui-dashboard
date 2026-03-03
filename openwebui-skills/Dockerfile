@@ -57,7 +57,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # --- Anthropic vendor scripts ---
 RUN bash server-setup/clone-anthropic-scripts.sh /app/OpenWebUI-Skills
 
-# --- Switch back to non-root if base image uses one ---
-# (OpenWebUI base image typically runs as root)
-
-WORKDIR /app
+# Do NOT set WORKDIR here — the base OpenWebUI image expects to start
+# from its own working directory (where start.sh lives).
