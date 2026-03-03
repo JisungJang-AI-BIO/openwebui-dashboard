@@ -272,23 +272,23 @@ def main():
 
     # ── Import Skills ──────────────────────────────────────────────────────
     print("\n--- Skills ---")
-    skill_ok = skill_skip = 0
+    skill_new = skill_upd = 0
 
     for md_path in sorted(glob.glob(f"{SKILLS_DIR}/*.md")):
         skill = parse_skill_md(md_path)
 
         cur.execute("SELECT 1 FROM skill WHERE id = %s", (skill["id"],))
-        if cur.fetchone():
-            grant_public_read(cur, "skill", skill["id"], now)
-            print(f"  [SKIP] {skill['id']}")
-            skill_skip += 1
-            continue
+        exists = cur.fetchone()
 
         cur.execute(
             """
             INSERT INTO skill (id, user_id, name, description, content, meta, is_active, created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s, %s, true, %s, %s)
-            ON CONFLICT (id) DO NOTHING
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                content = EXCLUDED.content,
+                updated_at = EXCLUDED.updated_at
             """,
             (
                 skill["id"],
@@ -302,24 +302,25 @@ def main():
             ),
         )
         grant_public_read(cur, "skill", skill["id"], now)
-        print(f"  [OK]   {skill['id']}")
-        skill_ok += 1
 
-    print(f"\n  Result: {skill_ok} imported, {skill_skip} skipped")
+        if exists:
+            print(f"  [UPD]  {skill['id']}")
+            skill_upd += 1
+        else:
+            print(f"  [NEW]  {skill['id']}")
+            skill_new += 1
+
+    print(f"\n  Result: {skill_new} new, {skill_upd} updated")
 
     # ── Import Tools ───────────────────────────────────────────────────────
     print("\n--- Tools ---")
-    tool_ok = tool_skip = 0
+    tool_new = tool_upd = 0
 
     for py_path in sorted(glob.glob(f"{TOOLS_DIR}/*.py")):
         tool = parse_tool_py(py_path)
 
         cur.execute("SELECT 1 FROM tool WHERE id = %s", (tool["id"],))
-        if cur.fetchone():
-            grant_public_read(cur, "tool", tool["id"], now)
-            print(f"  [SKIP] {tool['id']}")
-            tool_skip += 1
-            continue
+        exists = cur.fetchone()
 
         specs = generate_specs(tool["id"], tool["content"])
         meta = {"description": tool["description"], "manifest": {}}
@@ -328,7 +329,12 @@ def main():
             """
             INSERT INTO tool (id, user_id, name, content, specs, meta, valves, created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO NOTHING
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                content = EXCLUDED.content,
+                specs = EXCLUDED.specs,
+                meta = EXCLUDED.meta,
+                updated_at = EXCLUDED.updated_at
             """,
             (
                 tool["id"],
@@ -343,10 +349,15 @@ def main():
             ),
         )
         grant_public_read(cur, "tool", tool["id"], now)
-        print(f"  [OK]   {tool['id']} ({tool['name']})")
-        tool_ok += 1
 
-    print(f"\n  Result: {tool_ok} imported, {tool_skip} skipped")
+        if exists:
+            print(f"  [UPD]  {tool['id']} ({tool['name']})")
+            tool_upd += 1
+        else:
+            print(f"  [NEW]  {tool['id']} ({tool['name']})")
+            tool_new += 1
+
+    print(f"\n  Result: {tool_new} new, {tool_upd} updated")
 
     cur.close()
     conn.close()
@@ -355,12 +366,12 @@ def main():
     print("\n" + "=" * 50)
     print(" Done!")
 
-    if tool_ok > 0:
-        print("\n  Next steps (configure Valves for each tool):")
+    if tool_new > 0:
+        print("\n  Next steps (configure Valves for new tools):")
         print("    1. Open WebUI > Workspace > Tools")
         print("    2. Click gear icon on each tool")
         print("    3. Set SCRIPTS_DIR: /app/OpenWebUI-Skills/vendor/<toolname>")
-        print("  (Function-calling specs are auto-generated from source.)")
+    print("  (Function-calling specs are auto-generated from source.)")
 
     print("=" * 50)
 
