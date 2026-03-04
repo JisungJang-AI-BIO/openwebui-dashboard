@@ -106,31 +106,33 @@ def parse_tool_py(filepath):
     }
 
 
-# ── Access grant: public read, admin-only write ────────────────────────────
-def grant_public_read(cur, resource_type, resource_id, now):
-    """Insert a wildcard read grant so all users can view/use the resource.
-    Write access is NOT granted — only the owner and admins can edit.
+# ── Access grant: public read + write ──────────────────────────────────────
+def grant_public_access(cur, resource_type, resource_id, now):
+    """Insert wildcard read + write grants so all users can view and use
+    the resource.  Write is needed for code viewing in OpenWebUI's UI.
+    The authoritative source lives in the openwebui-skills repo; any
+    accidental edits are overwritten on next import.
     """
-    # Check if grant already exists
-    cur.execute(
-        """
-        SELECT 1 FROM access_grant
-        WHERE resource_type = %s AND resource_id = %s
-          AND principal_type = 'user' AND principal_id = '*' AND permission = 'read'
-        """,
-        (resource_type, resource_id),
-    )
-    if cur.fetchone():
-        return
+    for perm in ("read", "write"):
+        cur.execute(
+            """
+            SELECT 1 FROM access_grant
+            WHERE resource_type = %s AND resource_id = %s
+              AND principal_type = 'user' AND principal_id = '*' AND permission = %s
+            """,
+            (resource_type, resource_id, perm),
+        )
+        if cur.fetchone():
+            continue
 
-    grant_id = str(uuid.uuid4())
-    cur.execute(
-        """
-        INSERT INTO access_grant (id, resource_type, resource_id, principal_type, principal_id, permission, created_at)
-        VALUES (%s, %s, %s, 'user', '*', 'read', %s)
-        """,
-        (grant_id, resource_type, resource_id, now),
-    )
+        grant_id = str(uuid.uuid4())
+        cur.execute(
+            """
+            INSERT INTO access_grant (id, resource_type, resource_id, principal_type, principal_id, permission, created_at)
+            VALUES (%s, %s, %s, 'user', '*', %s, %s)
+            """,
+            (grant_id, resource_type, resource_id, perm, now),
+        )
 
 
 # ── Generate tool specs via AST parsing ──────────────────────────────────
@@ -314,7 +316,7 @@ def main():
                 now,
             ),
         )
-        grant_public_read(cur, "skill", skill["id"], now)
+        grant_public_access(cur,"skill", skill["id"], now)
 
         if exists:
             print(f"  [UPD]  {skill['id']}")
@@ -362,7 +364,7 @@ def main():
                 now,
             ),
         )
-        grant_public_read(cur, "tool", tool["id"], now)
+        grant_public_access(cur,"tool", tool["id"], now)
 
         if exists:
             print(f"  [UPD]  {tool['id']} ({tool['name']})")

@@ -46,6 +46,16 @@ export interface DeveloperRanking {
   total_negative: number;
 }
 
+export interface UserRanking {
+  user_id: string;
+  user_name: string;
+  email: string;
+  chat_count: number;
+  message_count: number;
+  workspace_count: number;
+  total_feedbacks: number;
+}
+
 export interface GroupRanking {
   group_id: string;
   group_name: string;
@@ -122,6 +132,9 @@ export const fetchWorkspaceRanking = (offset = 0, limit = 20) =>
 
 export const fetchDeveloperRanking = (offset = 0, limit = 20) =>
   api.get<PaginatedResponse<DeveloperRanking>>(`/api/v1/stats/developer-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
+
+export const fetchUserRanking = (offset = 0, limit = 20) =>
+  api.get<PaginatedResponse<UserRanking>>(`/api/v1/stats/user-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);
 
 export const fetchGroupRanking = (offset = 0, limit = 20) =>
   api.get<PaginatedResponse<GroupRanking>>(`/api/v1/stats/group-ranking?offset=${offset}&limit=${limit}`).then((r) => r.data);

@@ -382,6 +382,69 @@ def get_developer_ranking(
     }
 
 
+@v1.get("/stats/user-ranking")
+def get_user_ranking(
+    response: Response,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Rank individual users by their personal chat activity."""
+    response.headers["Cache-Control"] = "public, max-age=60"
+    rows = db.execute(text("""
+        WITH user_chats AS (
+            SELECT
+                c.user_id,
+                count(*) as chat_count,
+                sum(json_array_length(c.chat->'messages')) as message_count,
+                count(DISTINCT m.value) as workspace_count
+            FROM chat c, json_array_elements_text(c.chat->'models') AS m(value)
+            GROUP BY c.user_id
+        ),
+        user_fb AS (
+            SELECT
+                f.user_id,
+                count(*) as total_feedbacks
+            FROM feedback f
+            GROUP BY f.user_id
+        )
+        SELECT
+            u.id as user_id,
+            u.name as user_name,
+            u.email,
+            coalesce(uc.chat_count, 0) as chat_count,
+            coalesce(uc.message_count, 0) as message_count,
+            coalesce(uc.workspace_count, 0) as workspace_count,
+            coalesce(ufb.total_feedbacks, 0) as total_feedbacks,
+            count(*) OVER() as _total
+        FROM "user" u
+        LEFT JOIN user_chats uc ON u.id = uc.user_id
+        LEFT JOIN user_fb ufb ON u.id = ufb.user_id
+        WHERE coalesce(uc.chat_count, 0) > 0
+        ORDER BY chat_count DESC
+        LIMIT :limit OFFSET :offset
+    """), {"limit": limit, "offset": offset}).mappings().all()
+
+    total = rows[0]["_total"] if rows else 0
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "items": [
+            {
+                "user_id": row["user_id"],
+                "user_name": row["user_name"],
+                "email": row["email"],
+                "chat_count": int(row["chat_count"]),
+                "message_count": int(row["message_count"]),
+                "workspace_count": int(row["workspace_count"]),
+                "total_feedbacks": int(row["total_feedbacks"]),
+            }
+            for row in rows
+        ],
+    }
+
+
 @v1.get("/stats/group-ranking")
 def get_group_ranking(
     response: Response,

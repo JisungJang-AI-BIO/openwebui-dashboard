@@ -5,6 +5,7 @@ import StatCard from "@/components/StatCard";
 import DailyChart from "@/components/DailyChart";
 import WorkspaceRankingTable from "@/components/WorkspaceRankingTable";
 import DeveloperRankingTable from "@/components/DeveloperRankingTable";
+import UserRankingTable from "@/components/UserRankingTable";
 import GroupRankingTable from "@/components/GroupRankingTable";
 import ToolRankingTable from "@/components/ToolRankingTable";
 import FunctionRankingTable from "@/components/FunctionRankingTable";
@@ -13,10 +14,10 @@ import RequirePackages from "@/components/RequirePackages";
 import MockAuthBanner from "@/components/MockAuthBanner";
 import {
   fetchOverview, fetchDailyStats, fetchWorkspaceRanking,
-  fetchDeveloperRanking, fetchGroupRanking,
+  fetchDeveloperRanking, fetchUserRanking, fetchGroupRanking,
   fetchToolRanking, fetchFunctionRanking, fetchSkillRanking,
   type OverviewStats, type DailyStat,
-  type WorkspaceRanking, type DeveloperRanking, type GroupRanking,
+  type WorkspaceRanking, type DeveloperRanking, type UserRanking, type GroupRanking,
   type ToolRanking, type FunctionRanking, type SkillRanking,
 } from "@/lib/api";
 
@@ -33,6 +34,7 @@ export default function Dashboard() {
   const [daily, setDaily] = useState<DailyStat[]>([]);
   const [workspaces, setWorkspaces] = useState<WorkspaceRanking[]>([]);
   const [developers, setDevelopers] = useState<DeveloperRanking[]>([]);
+  const [users, setUsers] = useState<UserRanking[]>([]);
   const [groups, setGroups] = useState<GroupRanking[]>([]);
   const [tools, setTools] = useState<ToolRanking[]>([]);
   const [functions, setFunctions] = useState<FunctionRanking[]>([]);
@@ -48,6 +50,8 @@ export default function Dashboard() {
   const [wsTotal, setWsTotal] = useState(0);
   const [devOffset, setDevOffset] = useState(0);
   const [devTotal, setDevTotal] = useState(0);
+  const [usrOffset, setUsrOffset] = useState(0);
+  const [usrTotal, setUsrTotal] = useState(0);
   const [grpOffset, setGrpOffset] = useState(0);
   const [grpTotal, setGrpTotal] = useState(0);
   const [toolOffset, setToolOffset] = useState(0);
@@ -63,6 +67,7 @@ export default function Dashboard() {
       fetchDailyStats(dateFrom, dateTo).then(setDaily),
       fetchWorkspaceRanking(0, PAGE_SIZE).then((res) => { setWorkspaces(res.items); setWsTotal(res.total); }),
       fetchDeveloperRanking(0, PAGE_SIZE).then((res) => { setDevelopers(res.items); setDevTotal(res.total); }),
+      fetchUserRanking(0, PAGE_SIZE).then((res) => { setUsers(res.items); setUsrTotal(res.total); }),
       fetchGroupRanking(0, PAGE_SIZE).then((res) => { setGroups(res.items); setGrpTotal(res.total); }),
       fetchToolRanking(0, PAGE_SIZE).then((res) => { setTools(res.items); setToolTotal(res.total); }),
       fetchFunctionRanking(0, PAGE_SIZE).then((res) => { setFunctions(res.items); setFnTotal(res.total); }),
@@ -86,6 +91,10 @@ export default function Dashboard() {
   const handleDevPage = (newOffset: number) => {
     setDevOffset(newOffset);
     fetchDeveloperRanking(newOffset, PAGE_SIZE).then((res) => { setDevelopers(res.items); setDevTotal(res.total); });
+  };
+  const handleUsrPage = (newOffset: number) => {
+    setUsrOffset(newOffset);
+    fetchUserRanking(newOffset, PAGE_SIZE).then((res) => { setUsers(res.items); setUsrTotal(res.total); });
   };
   const handleGrpPage = (newOffset: number) => {
     setGrpOffset(newOffset);
@@ -140,6 +149,7 @@ export default function Dashboard() {
       <DailyChart data={daily} dateFrom={dateFrom} dateTo={dateTo} onDateChange={handleDateChange} />
       <WorkspaceRankingTable data={workspaces} total={wsTotal} offset={wsOffset} limit={PAGE_SIZE} onPageChange={handleWsPage} />
       <DeveloperRankingTable data={developers} total={devTotal} offset={devOffset} limit={PAGE_SIZE} onPageChange={handleDevPage} />
+      <UserRankingTable data={users} total={usrTotal} offset={usrOffset} limit={PAGE_SIZE} onPageChange={handleUsrPage} />
       <GroupRankingTable data={groups} total={grpTotal} offset={grpOffset} limit={PAGE_SIZE} onPageChange={handleGrpPage} />
       <ToolRankingTable data={tools} total={toolTotal} offset={toolOffset} limit={PAGE_SIZE} onPageChange={handleToolPage} />
       <FunctionRankingTable data={functions} total={fnTotal} offset={fnOffset} limit={PAGE_SIZE} onPageChange={handleFnPage} />
