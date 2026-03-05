@@ -166,6 +166,7 @@ export interface IssueReport {
   description: string;
   category: "bug" | "feature" | "question" | "other";
   reported_by: string;
+  actual_reported_by?: string; // only present for admins on anonymous reports
   is_anonymous: boolean;
   status: "open" | "in_progress" | "resolved" | "rejected" | "wontfix";
   admin_note: string | null;

@@ -231,7 +231,11 @@ export default function IssueReports({ currentUser }: IssueReportsProps) {
                         {stsCfg.label}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        by {report.reported_by} &middot; {report.created_at.slice(0, 16)}
+                        by {report.reported_by}
+                        {isAdmin && report.actual_reported_by && (
+                          <span className="ml-1 text-amber-400/80" title="Actual author (admin only)">({report.actual_reported_by})</span>
+                        )}
+                        {" "}&middot; {report.created_at.slice(0, 16)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1 ml-2 shrink-0">

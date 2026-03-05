@@ -877,8 +877,10 @@ def list_reports(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
 ):
     response.headers["Cache-Control"] = "no-cache"
+    is_admin = current_user in ADMIN_USERS
     rows = db.execute(text("""
         SELECT id, title, description, category, reported_by, is_anonymous,
                status, admin_note,
@@ -890,25 +892,29 @@ def list_reports(
         LIMIT :limit OFFSET :offset
     """), {"limit": limit, "offset": offset}).mappings().all()
     total = rows[0]["_total"] if rows else 0
+    items = []
+    for row in rows:
+        item = {
+            "id": row["id"],
+            "title": row["title"],
+            "description": row["description"],
+            "category": row["category"],
+            "reported_by": "Anonymous" if row["is_anonymous"] else (row["reported_by"] or "Unknown"),
+            "is_anonymous": row["is_anonymous"],
+            "status": row["status"],
+            "admin_note": row["admin_note"],
+            "created_at": str(row["created_at"]),
+            "updated_at": str(row["updated_at"]),
+        }
+        # Admin can see real author even for anonymous reports
+        if is_admin and row["is_anonymous"]:
+            item["actual_reported_by"] = row["reported_by"]
+        items.append(item)
     return {
         "total": total,
         "offset": offset,
         "limit": limit,
-        "items": [
-            {
-                "id": row["id"],
-                "title": row["title"],
-                "description": row["description"],
-                "category": row["category"],
-                "reported_by": "Anonymous" if row["is_anonymous"] else (row["reported_by"] or "Unknown"),
-                "is_anonymous": row["is_anonymous"],
-                "status": row["status"],
-                "admin_note": row["admin_note"],
-                "created_at": str(row["created_at"]),
-                "updated_at": str(row["updated_at"]),
-            }
-            for row in rows
-        ],
+        "items": items,
     }
 
 

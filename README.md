@@ -67,11 +67,14 @@ All host ports bind to `127.0.0.1` only. External access is handled by the host 
 - **Daily Usage Chart** — line chart with date range picker (KST)
 - **Workspace Ranking** — chat/message/user counts, feedback rating per workspace
 - **Developer Ranking** — aggregated metrics per workspace developer
+- **User Ranking** — individual user activity (chats, messages, workspaces, feedbacks)
 - **Group Ranking** — team usage metrics with per-member averages
 - **Tool Registry** — registered Tools with creator info (from OpenWebUI-Skills)
 - **Function Registry** — registered Functions (pipes, filters, actions) with creator info
 - **Skill Registry** — registered Skills (markdown prompts) with description and active status
 - **Python Package Requests** — users request packages, admins manage status (pending/installed/rejected/uninstalled), export as `requirements.txt`
+- **Issue Reports** — GitHub Issues-style user reporting (bug/feature/question), anonymous option, admin status management
+- **Tab Navigation** — tables grouped into Usage Rankings / Asset Registry / Requests & Reports
 
 ## Prerequisites
 
@@ -165,13 +168,16 @@ openwebui-docker-with-dashboard/
 │           │   ├── Layout.tsx
 │           │   ├── StatCard.tsx
 │           │   ├── DailyChart.tsx
+│           │   ├── TabGroup.tsx
 │           │   ├── WorkspaceRankingTable.tsx
 │           │   ├── DeveloperRankingTable.tsx
+│           │   ├── UserRankingTable.tsx
 │           │   ├── GroupRankingTable.tsx
 │           │   ├── ToolRankingTable.tsx
 │           │   ├── FunctionRankingTable.tsx
 │           │   ├── SkillRankingTable.tsx
 │           │   ├── RequirePackages.tsx
+│           │   ├── IssueReports.tsx
 │           │   └── MockAuthBanner.tsx
 │           └── pages/
 │               └── Dashboard.tsx
@@ -208,6 +214,11 @@ openwebui-docker-with-dashboard/
 | `DASHBOARD_FRONTEND_PORT` | `10087` | Dashboard UI host port |
 | `DASHBOARD_AUTH_MODE` | `mock` | `mock` for dev, `sso` for production |
 | `DASHBOARD_ADMIN_USERS` | `jisung.jang` | Comma-separated admin usernames |
+| `RAG_EMBEDDING_ENGINE` | *(empty)* | Empty = SentenceTransformers (local GPU), `ollama` = Ollama |
+| `RAG_EMBEDDING_MODEL` | `Qwen/Qwen3-Embedding-4B` | HuggingFace embedding model name |
+| `DEVICE_TYPE` | `cuda` | Embedding device: `cuda` or `cpu` |
+| `CONTENT_EXTRACTION_ENGINE` | `mineru` | Document extraction: `mineru`, `docling`, `tika`, or empty |
+| `MINERU_API_URL` | `http://localhost:8001` | MinerU API server URL |
 | `GLOBAL_LOG_LEVEL` | `DEBUG` | Open WebUI log level |
 | `STAGING_DB_PORT` | `5433` | Staging PostgreSQL host port |
 | `STAGING_WEBUI_PORT` | `10088` | Staging Open WebUI host port |
@@ -238,6 +249,7 @@ Both ports use TLS 1.3 with a wildcard certificate.
 | GET | `/api/stats/daily?from=&to=` | No | Daily usage (KST dates) |
 | GET | `/api/stats/workspace-ranking` | No | Workspace metrics with feedback rating |
 | GET | `/api/stats/developer-ranking` | No | Developer aggregated metrics |
+| GET | `/api/stats/user-ranking` | No | Individual user activity metrics |
 | GET | `/api/stats/group-ranking` | No | Group metrics with per-member averages |
 | GET | `/api/stats/tool-ranking` | No | Registered tools with creator info |
 | GET | `/api/stats/function-ranking` | No | Registered functions (pipes, filters, actions) |
@@ -247,6 +259,10 @@ Both ports use TLS 1.3 with a wildcard certificate.
 | POST | `/api/packages` | Yes | Request a new package |
 | DELETE | `/api/packages/{id}` | Yes | Delete own request (or admin) |
 | PATCH | `/api/packages/{id}/status` | Admin | Change package status |
+| GET | `/api/reports` | Yes | List issue reports (admin sees anonymous authors) |
+| POST | `/api/reports` | Yes | Submit a new report (with optional anonymous flag) |
+| PATCH | `/api/reports/{id}/status` | Admin | Change report status |
+| DELETE | `/api/reports/{id}` | Yes | Delete own report (or admin) |
 
 ## Operations
 
